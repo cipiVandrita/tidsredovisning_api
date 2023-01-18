@@ -63,6 +63,38 @@ function hamtaAlla(): Response {
  * @return Response
  */
 function hamtaEnskild(int $id): Response {
+    // kontrollera indata
+    $kollatID=filter_var($id, FILTER_VALIDATE_INT);
+    if(!$kollatID || $kollatID < 1){   
+        $out=new stdClass();
+        $out->error=["Felaktig indata", "$id är inget heltal"];
+        return new Response($out,400 );
+    }
+    //koppla databas och hämta post
+    $db= connectDb();
+    $stmt=$db->prepare("SELECT id, kategori FROM kategorier where id=:id");
+    if (!$stmt->execute(["id"=>$kollatID])) {
+        $out=new stdClass();
+        $out->error=["Fel vid läsning från databasen". implode(",", $stmt->errorInfo())];
+        return new Response($out,400);
+    }
+
+    if($row=$stmt->fetch()){
+        $out=new stdClass();
+        $out->id=$row["id"];
+        $out->activity=$row["kategori"];
+        return new Response($out);
+
+    } else {
+        $out=new stdClass();
+        $out->error=["Hittade inger post med id=$kollatID"];
+        return new Response($out, 400);
+    }
+
+    
+    //sätt utdata
+
+    //Returnera utdata
     return new Response("Hämta aktivitet $id", 200);
 }
 

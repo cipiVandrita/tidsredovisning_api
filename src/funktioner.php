@@ -2,7 +2,7 @@
 
 declare (strict_types=1);
 
-function connectdb():PDO{
+function connectDb():PDO{
     //koppla mot databasen
     $dsn='mysql:dbname=tidsrapport;host=localhost';
     $dbUser = 'root';

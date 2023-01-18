@@ -38,20 +38,22 @@ function testActivityFunction(string $funktion): string {
 function test_HamtaAllaAktiviteter(): string {
     $retur = "<h2>test_HamtaAllaAktiviteter</h2>";
     try{
-    $svar=hamtaAlla();
+    $svar= hamtaAlla();
     //kontrollerar statuskoden
-    if($svar->getStatus()===200) {
-        $retur .="<p class='error'>Felaktig statuskod förväntade 200 fick {($svar->getStatus()}</p>";
+    if(!$svar->getStatus()===200) {
+        $retur .="<p class='error'>Felaktig statuskod förväntade 200 fick {$svar->getStatus()}</p>";
     } else {
         $retur .="<p class='ok'>Korrekt statuskod 200</p>";
     }
+    // Kontrollerar att ingen aktivitet är tom
     foreach ($svar->getContent() as $aktivitet) {
+        if ($aktivitet->activity === "")
         $retur .= "<p class='error'>TOM aktivitet!</p>";
     }
 }
-     catch (Exception $ex){
-    $retur .= "<p class='ok'>Testar hämta alla aktiviteter</p>";
-}
+    catch (Exception $ex){
+    $retur .= "<p class='error'>Något gick fel, meddelandet säger:<br> {$ex->getMessage()}</p>";
+ }
 
     return $retur;
 }
@@ -62,10 +64,47 @@ function test_HamtaAllaAktiviteter(): string {
  */
 function test_HamtaEnAktivitet(): string {
     $retur = "<h2>test_HamtaEnAktivitet</h2>";
-    $retur .= "<p class='ok'>Testar hämta en aktivitet</p>";
-    $retur .= "<p class='error'>Det här testet gick fel!</p>";
-    return $retur;
+    try{
+        //Testa negativt tal
+        $svar= hamtaEnskild(-1);
+        if($svar->getStatus()===400){
+            $retur .= "<p class='ok'>Hämta enskild med negativt tal ger förväntat svar 400</p>";
+        } else {
+            $retur .= "<p class='error'>Hämta enskild med negativt tal ger {$svar->getStatus()}"
+            ."inte förväntat svar 400</p>";
+        }
+        //Testa för stort tal
+        $svar= hamtaEnskild(100);
+        if($svar->getStatus()===400){
+            $retur .= "<p class='ok'>Hämta enskild med stort tal ger förväntat svar 400</p>";
+        } else {
+            $retur .= "<p class='error'>Hämta enskild med stort (100) tal ger {$svar->getStatus()}"
+            ."inte förväntat svar 400</p>";
+        }
+        //Testa bokstäver
+        $svar= hamtaEnskild((int) "sju");
+        if($svar->getStatus()===400){
+            $retur .= "<p class='ok'>Hämta enskild med bokstäver  ger förväntat svar 400</p>";
+        } else {
+            $retur .= "<p class='error'>Hämta enskild med bokstäver {'sju'} tal ger {$svar->getStatus()}"
+            ."inte förväntat svar 400</p>";
+        }
+        //Testa giltigt tal
+        $svar= hamtaEnskild(3);
+        if($svar->getStatus()===200){
+            $retur .= "<p class='ok'>Hämta enskild med med 3 ger förväntat svar 200</p>";
+        } else {
+            $retur .= "<p class='error'>Hämta enskild med enskild med 3 ger {$svar->getStatus()}"
+            . "inte förväntat svar 200</p>";
+        }
+        }
+    catch (Exception $ex){
+   $retur .= "<p class='error'>Något gick fel, meddelandet säger:<br> [$ex->getMessage()]</p>";
 }
+
+return $retur;
+}
+   
 
 /**
  * Tester för funktionen spara aktivitet
