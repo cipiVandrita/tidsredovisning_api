@@ -17,7 +17,8 @@ function activities(Route $route, array $postData): Response {
         if (count($route->getParams()) === 1 && $route->getMethod() === RequestMethod::GET) {
             return hamtaEnskild((int) $route->getParams()[0]);
         }
-        if (count($route->getParams()) === 0 && $route->getMethod() === RequestMethod::POST) {
+        if (isset ($postData["activity"]) && count($route->getParams()) === 0 && 
+            $route->getMethod() === RequestMethod::POST) {
             return sparaNy((string) $postData["activity"]);
         }
         if (count($route->getParams()) === 1 && $route->getMethod() === RequestMethod::PUT) {
@@ -104,7 +105,47 @@ function hamtaEnskild(int $id): Response {
  * @return Response
  */
 function sparaNy(string $aktivitet): Response {
-    return new Response("Sparar ny aktivitet:$aktivitet", 200);
+    
+        //kontrollera indata
+        $kontrolleradAktivitet= filter_var($aktivitet, FILTER_SANITIZE_ENCODED);
+        $kontrolleradAktivitet= trim($kontrolleradAktivitet);
+        if($kontrolleradAktivitet==="") {
+            $out=new stdClass();
+            $out->error=["Fel vid uppdatering", "activity kan inter vara tom"];
+             return new Response($out, 400);
+        }
+ 
+    
+        //koppla mot databas
+        $db= connectDb();       
+        try {
+
+        //uppdatera post
+        $stmt=$db->prepare("INSERT INTO kategorier (kategori) VALUES (:kategori)");
+        $stmt->execute(["kategori"=>$kontrolleradAktivitet]);
+        $antalPoster=$stmt->rowCount();
+        
+
+        //returnera svar
+        if($antalPoster>0){
+            $out=new stdClass();
+            $out->message=["uppdatering lyckades", "$antalPoster post(er) lades till"];
+            $out->id=$db->lastInsertId();
+            return new Response($out);
+
+        } else {
+            $out=new stdClass();
+            $out->error=["något gick fel vid uppdatering", implode(",", $db->errorInfo())];
+            return new Response($out, 400);
+
+        }
+    }catch (Exception $ex) {
+        $out = new stdClass();
+        $out->error = ["något gick fel vid uppdatering" , $ex->getMessage()];
+        return new Response($out, 400);
+    }
+    
+
 }
 
 /**
@@ -114,8 +155,57 @@ function sparaNy(string $aktivitet): Response {
  * @return Response
  */
 function uppdatera(int $id, string $aktivitet): Response {
-    return new Response("Uppdaterar aktivetet $id -> $aktivitet", 200);
+    
+        // kontrollera indata
+    $kollatID=filter_var($id, FILTER_VALIDATE_INT);
+    if(!$kollatID || $kollatID < 1){   
+        $out=new stdClass();
+        $out->error=["Felaktig indata", "$id är inget heltal"];
+        return new Response($out,400 );
+    }
+    $kontrolleradAktivitet= filter_var($aktivitet, FILTER_SANITIZE_ENCODED);
+        $kontrolleradAktivitet= trim($kontrolleradAktivitet);
+        if($kontrolleradAktivitet==="") {
+            $out=new stdClass();
+            $out->error=["Fel vid uppdatering", "activity kan inter vara tom"];
+             return new Response($out, 400);
+        }
+ 
+    try {
+        //koppla mot databas
+        $db= connectDb();       
+        
+
+        //uppdatera post
+        $stmt=$db->prepare(" UPDATE kategorier "
+                . " SET kategori=:aktivitet"
+                . " WHERE id=:id");
+        $stmt->execute(["aktivitet"=>$kontrolleradAktivitet, "id" => $kollatID]);
+        $antalPoster=$stmt->rowCount();
+        
+
+        //returnera svar 
+        $out=new stdClass();
+        if($antalPoster>0){
+            $out->result = true;
+            $out->message=["uppdatering lyckades", "$antalPoster poster uppdaterades"];
+
+        } else {
+            $out->result = false;
+            $out->message = ["uppdatering lyckades", "0  Poster uppdaterades"];
+
+        }
+        return new Response($out, 200);
+    }catch (Exception $ex) {
+        $out = new stdClass();
+        $out->error = ["något gick fel vid uppdatering" , $ex->getMessage()];
+        return new Response($out, 400);
+    }
+
 }
+    
+
+
 
 /**
  * Raderar en aktivitet med angivet id
