@@ -10,6 +10,7 @@ require_once __DIR__ .  './funktioner.php';
  * @return Response
  */
 function activities(Route $route, array $postData): Response {
+    var_dump($route, $postData);
     try {
         if (count($route->getParams()) === 0 && $route->getMethod() === RequestMethod::GET) {
             return hamtaAlla();
@@ -79,7 +80,7 @@ function hamtaEnskild(int $id): Response {
         $out->error=["Fel vid läsning från databasen". implode(",", $stmt->errorInfo())];
         return new Response($out,400);
     }
-
+ //sätt utdata returnera
     if($row=$stmt->fetch()){
         $out=new stdClass();
         $out->id=$row["id"];
@@ -88,15 +89,9 @@ function hamtaEnskild(int $id): Response {
 
     } else {
         $out=new stdClass();
-        $out->error=["Hittade inger post med id=$kollatID"];
+        $out->error=["Hittade inget post med id=$kollatID"];
         return new Response($out, 400);
     }
-
-    
-    //sätt utdata
-
-    //Returnera utdata
-    return new Response("Hämta aktivitet $id", 200);
 }
 
 /**
@@ -111,7 +106,7 @@ function sparaNy(string $aktivitet): Response {
         $kontrolleradAktivitet= trim($kontrolleradAktivitet);
         if($kontrolleradAktivitet==="") {
             $out=new stdClass();
-            $out->error=["Fel vid uppdatering", "activity kan inter vara tom"];
+            $out->error=["Fel vid spara", "activity kan inter vara tom"];
              return new Response($out, 400);
         }
  
@@ -129,19 +124,19 @@ function sparaNy(string $aktivitet): Response {
         //returnera svar
         if($antalPoster>0){
             $out=new stdClass();
-            $out->message=["uppdatering lyckades", "$antalPoster post(er) lades till"];
+            $out->message=["sparning lyckades", "$antalPoster post(er) lades till"];
             $out->id=$db->lastInsertId();
             return new Response($out);
 
         } else {
             $out=new stdClass();
-            $out->error=["något gick fel vid uppdatering", implode(",", $db->errorInfo())];
+            $out->error=["något gick fel vid spara", implode(",", $db->errorInfo())];
             return new Response($out, 400);
 
         }
     }catch (Exception $ex) {
         $out = new stdClass();
-        $out->error = ["något gick fel vid uppdatering" , $ex->getMessage()];
+        $out->error = ["något gick fel vid spara" , $ex->getMessage()];
         return new Response($out, 400);
     }
     
@@ -213,5 +208,42 @@ function uppdatera(int $id, string $aktivitet): Response {
  * @return Response
  */
 function radera(int $id): Response {
-    return new Response("Raderar aktivitet $id", 200);
+    // kontrollera id
+     $kollatID=filter_var($id, FILTER_VALIDATE_INT);
+     if(!$kollatID || $kollatID < 1){   
+         $out=new stdClass();
+         $out->error=["Felaktig indata", "$id är inget heltal"];
+         return new Response($out,400 );
+     }
+   
+try{
+    //koppla mot databas
+    $db= connectDb();       
+        
+
+    //skicka radera-kommando
+    $stmt=$db->prepare("DELETE FROM kategorier"
+            . " WHERE id=:id");
+    $stmt->execute(["id"=>$kollatID]);
+    $antalPoster=$stmt->rowCount();
+    
+    //kontrollera databas-svar och skapa utdata-svar
+    $out=new stdClass();
+    if($antalPoster>0) {
+        $out->result=true;
+        $out->message=["radera lyckades", "$antalPoster post(er) raderades"];
+
+    } else {
+        $out->result=false;
+        $out->message=["radera misslyckades", "inga poster raderades"];
+    }
+
+    return new Response($out);
+
+    }catch (Exception $ex) {
+        $out = new stdClass();
+        $out->error = ["något gick fel vid radera" , $ex->getMessage()];
+        return new Response($out, 400);
+    }
+
 }
