@@ -1,6 +1,7 @@
 <?php
 
 declare (strict_types=1);
+require_once __DIR__ . '/../src/tasks.php';   
 
 /**
  * Funktion för att testa alla aktiviteter
@@ -36,7 +37,65 @@ function testTaskFunction(string $funktion): string {
  */
 function test_HamtaUppgifterSida(): string {
     $retur = "<h2>test_HamtaUppgifterSida</h2>";
-    $retur .= "<p class='ok'>Testar hämta alla uppgifter på en sida</p>";
+    try{
+    //testa hämta delaktig sidnummer (-1) => 400
+        $svar= hamtaSida(-1);
+        if($svar->getStatus()===400) {
+            $retur .="<p class='ok'> hämta felaktigt sidnummer (-1) gav förväntat svar 400</p>";
+        } else {
+            $retur .="<p class='ok'> hämta felaktigt sidnummer (-1) gav {$svar->getStatus()} " 
+            . "istället för förväntat svar 400</p>";
+
+        }
+
+    // testa hämta giltigt sidnummer (1) => 200 + rätt egenskaper
+    $svar=hamtaSida(1);
+    if($svar->getStatus()!==200) {
+            $retur .="<p class='ok'> hämta giltigt felaktigt sidnummer (-1) gav {$svar->getStatus()} " 
+            . "istället för förväntat svar 200</p>";
+    } else {
+        $retur .="<p class='ok'> hämta giltigt sidnummer (-1) gav förväntat svar 200</p>";
+        $result=$svar->getContent()->tasks;
+        foreach ($result as $tasks) {
+            if(!isset($tasks->id)){
+                $retur .="<p class'error'>Egenskapen id saknas</p>";
+                break;
+            }
+            if(!isset($tasks->activityId)){
+                $retur .="<p class'error'>Egenskapen activityid saknas</p>";
+                break;
+            }
+            if(!isset($tasks->activity)){
+                $retur .="<p class'error'>Egenskapen activity saknas</p>";
+                break;
+            }
+            if(!isset($tasks->date)){
+                $retur .="<p class'error'>Egenskapen date saknas</p>";
+                break;
+            }
+            if(!isset($tasks->time)){
+                $retur .="<p class'error'>Egenskapen time saknas</p>";
+                break;
+            }
+        }
+    }
+
+    //testa hämta fler stor sidnr => 200 + tom array
+    $svar= hamtaSida(100);
+    if($svar->getStatus()!==200) {
+        $retur .="<p class='error'> hämta för stort sidnummer (100) gav {$svar->getStatus()} " 
+        . "istället för förväntat svar 200</p>";
+    } else {
+        $retur .="<p class='ok'> hämta för stort (100) gav förväntat svar 200</p>";
+        $resultat=$svar->getContent()->tasks;
+        if(!$resultat===[]) {
+            $retur .="<p class='error'> hämta för stort sidnummer ska inehålla en tom array för tasks<br>" 
+            . print_r($resultat, true) . "<br>returnerades</p>";
+        }
+    }
+    } catch (Exception $ex){
+        $retur .= "<p class='error'>Något gick fel, meddelandet säger:<br> {$ex->getMessage()}</p>";
+     }
     return $retur;
 }
 
@@ -46,7 +105,69 @@ function test_HamtaUppgifterSida(): string {
  */
 function test_HamtaAllaUppgifterDatum(): string {
     $retur = "<h2>test_HamtaAllaUppgifterDatum</h2>";
-    $retur .= "<p class='ok'>Testar hämta alla uppgifter mellan två datum</p>";
+    //testa fel ordning på datum 
+    $datum1=new DateTimeImmutable();
+    $datum2=new DateTime("yesterday");
+    $svar= hamtaDatum($datum1, $datum2);
+    if($svar->getStatus()===400) {
+        $retur .="<p class='ok'> hämta fel ordning på datum gav förväntat svar 400</p>";
+    } else {
+        $retur .="<p class='error'> hämta fel ordning på datum gav {$svar->getStatus()} " 
+        . "istället för förväntat svar 400</p>";
+
+    }
+
+    
+    //testa datum utan poster => 200 och tom array för tasks
+    $datum1=new DateTimeImmutable("1970-01-01");
+    $datum2=new DateTimeImmutable("1970-01-01");
+    $svar= hamtaDatum($datum1, $datum2);
+    if($svar->getStatus()!==200) {
+        $retur .="<p class='error'> hämta datum (1970-01-01 -- 1970-01-01) gav {$svar->getStatus()} " 
+        . "istället för förväntat svar 200</p>";
+    } else {
+        $retur .="<p class='ok'> hämta datum (1970-01-01 -- 1970-01-01) gav förväntat svar 200</p>";
+        $resultat=$svar->getContent()->tasks;
+        if(!$resultat===[]) {
+            $retur .="<p class='error'> hämta datum (1970-01-01 -- 1970-01-01) ska inehålla en tom array för tasks<br>" 
+            . print_r($resultat, true) . "<br>returnerades</p>";
+        }
+    }
+
+
+
+    //testa giltiga datum med poster => 200 och giltiga egenskaper
+    if($svar->getStatus()!==200) {
+        $retur .="<p class='error'> hämta poster för datum (1970-01-01 -- {$datum2->format('Y-m-d')} " 
+                .  " gav {$svar->getStatus()} istället för förväntat svar 200</p>";
+} else {
+    $retur .="<p class='ok'> hämta poster för datum (1970-01-01 -- {$datum2->format('Y-m-d')} " 
+    . " gav förväntat svar 200</p>";
+    $result=$svar->getContent()->tasks;
+    foreach ($result as $tasks) {
+        if(!isset($tasks->id)){
+            $retur .="<p class'error'>Egenskapen id saknas</p>";
+            break;
+        }
+        if(!isset($tasks->activityId)){
+            $retur .="<p class'error'>Egenskapen activityid saknas</p>";
+            break;
+        }
+        if(!isset($tasks->activity)){
+            $retur .="<p class'error'>Egenskapen activity saknas</p>";
+            break;
+        }
+        if(!isset($tasks->date)){
+            $retur .="<p class'error'>Egenskapen date saknas</p>";
+            break;
+        }
+        if(!isset($tasks->time)){
+            $retur .="<p class'error'>Egenskapen time saknas</p>";
+            break;
+        }
+    }
+}
+
     return $retur;
 }
 

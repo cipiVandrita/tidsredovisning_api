@@ -13,20 +13,20 @@ function activities(Route $route, array $postData): Response {
     var_dump($route, $postData);
     try {
         if (count($route->getParams()) === 0 && $route->getMethod() === RequestMethod::GET) {
-            return hamtaAlla();
+            return hamtaAllaAktiviteter();
         }
         if (count($route->getParams()) === 1 && $route->getMethod() === RequestMethod::GET) {
-            return hamtaEnskild((int) $route->getParams()[0]);
+            return hamtaEnskildAktivitet((int) $route->getParams()[0]);
         }
         if (isset ($postData["activity"]) && count($route->getParams()) === 0 && 
             $route->getMethod() === RequestMethod::POST) {
-            return sparaNy((string) $postData["activity"]);
+            return sparaNyAktivitet((string) $postData["activity"]);
         }
         if (count($route->getParams()) === 1 && $route->getMethod() === RequestMethod::PUT) {
-            return uppdatera((int) $route->getParams()[0], (string) $postData["activity"]);
+            return uppdaterAaktivitet((int) $route->getParams()[0], (string) $postData["activity"]);
         }
         if (count($route->getParams()) === 1 && $route->getMethod() === RequestMethod::DELETE) {
-            return radera((int) $route->getParams()[0]);
+            return raderaAktivitet((int) $route->getParams()[0]);
         }
     } catch (Exception $exc) {
         return new Response($exc->getMessage(), 400);
@@ -39,7 +39,7 @@ function activities(Route $route, array $postData): Response {
  * Returnerar alla aktiviteter som finns i databasen
  * @return Response
  */
-function hamtaAlla(): Response {
+function hamtaAllaAktiviteter(): Response {
     //koppla mot databasen
     $db=connectDb();
 
@@ -54,9 +54,11 @@ function hamtaAlla(): Response {
         $post->activity=$row['kategori'];
         $retur[]=$post;
     }
+    $out= new stdClass();
+    $out->activities=$retur;
  
     //returnera svaret
-    return new Response($retur, 200);    
+    return new Response($out, 200);    
 }
 
 /**
@@ -64,7 +66,7 @@ function hamtaAlla(): Response {
  * @param int $id Id för aktiviteten
  * @return Response
  */
-function hamtaEnskild(int $id): Response {
+function hamtaEnskildAktivitet(int $id): Response {
     // kontrollera indata
     $kollatID=filter_var($id, FILTER_VALIDATE_INT);
     if(!$kollatID || $kollatID < 1){   
@@ -99,7 +101,7 @@ function hamtaEnskild(int $id): Response {
  * @param string $aktivitet Aktivitet som ska sparas
  * @return Response
  */
-function sparaNy(string $aktivitet): Response {
+function sparaNyAktivitet(string $aktivitet): Response {
     
         //kontrollera indata
         $kontrolleradAktivitet= filter_var($aktivitet, FILTER_SANITIZE_ENCODED);
@@ -115,7 +117,7 @@ function sparaNy(string $aktivitet): Response {
         $db= connectDb();       
         try {
 
-        //uppdatera post
+        //uppdateraaktivitet post
         $stmt=$db->prepare("INSERT INTO kategorier (kategori) VALUES (:kategori)");
         $stmt->execute(["kategori"=>$kontrolleradAktivitet]);
         $antalPoster=$stmt->rowCount();
@@ -149,7 +151,7 @@ function sparaNy(string $aktivitet): Response {
  * @param string $aktivitet Ny text
  * @return Response
  */
-function uppdatera(int $id, string $aktivitet): Response {
+function uppdateraaktivitet(int $id, string $aktivitet): Response {
     
         // kontrollera indata
     $kollatID=filter_var($id, FILTER_VALIDATE_INT);
@@ -171,7 +173,7 @@ function uppdatera(int $id, string $aktivitet): Response {
         $db= connectDb();       
         
 
-        //uppdatera post
+        //uppdateraaktivitet post
         $stmt=$db->prepare(" UPDATE kategorier "
                 . " SET kategori=:aktivitet"
                 . " WHERE id=:id");
@@ -207,7 +209,7 @@ function uppdatera(int $id, string $aktivitet): Response {
  * @param int $id Id för posten som ska raderas
  * @return Response
  */
-function radera(int $id): Response {
+function raderaAktivitet(int $id): Response {
     // kontrollera id
      $kollatID=filter_var($id, FILTER_VALIDATE_INT);
      if(!$kollatID || $kollatID < 1){   
@@ -221,7 +223,7 @@ try{
     $db= connectDb();       
         
 
-    //skicka radera-kommando
+    //skicka raderaAktivitiet-kommando
     $stmt=$db->prepare("DELETE FROM kategorier"
             . " WHERE id=:id");
     $stmt->execute(["id"=>$kollatID]);
@@ -231,18 +233,18 @@ try{
     $out=new stdClass();
     if($antalPoster>0) {
         $out->result=true;
-        $out->message=["radera lyckades", "$antalPoster post(er) raderades"];
+        $out->message=["raderaAktivitiet lyckades", "$antalPoster post(er) raderades"];
 
     } else {
         $out->result=false;
-        $out->message=["radera misslyckades", "inga poster raderades"];
+        $out->message=["raderaAktivitiet misslyckades", "inga poster raderades"];
     }
 
     return new Response($out);
 
     }catch (Exception $ex) {
         $out = new stdClass();
-        $out->error = ["något gick fel vid radera" , $ex->getMessage()];
+        $out->error = ["något gick fel vid raderaAktivitiet" , $ex->getMessage()];
         return new Response($out, 400);
     }
 
