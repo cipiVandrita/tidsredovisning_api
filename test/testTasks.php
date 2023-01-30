@@ -185,9 +185,136 @@ function test_HamtaEnUppgift(): string {
  * Test för funktionen spara uppgift
  * @return string html-sträng med alla resultat för testerna
  */
-function test_SparaUppgift(): string {
+function test_SparanyUppgift(): string {
     $retur = "<h2>test_SparaUppgift</h2>";
-    $retur .= "<p class='ok'>Testar spara uppgift</p>";
+    try{
+    // testa allt  ok
+    $igar=new DateTimeImmutable("yesterday");
+    $imorgon=new DateTimeImmutable("tomorrow");
+    $postData=["date"=>$igar->format('Y-m-d'),
+        "time"=>"05:00",
+        "activityId"=>1,
+        "description"=>"Hurra vad bra"];
+    $db= connectDb();
+    $db->beginTransaction();
+    $svar=sparaNyUppgift($postData);
+    if($svar->getStatus()===200) {
+        $retur .="<p class='ok'>spara ny uppgift lyckades</p>";
+    } else {
+        $retur .= "<p class='error'>spara ny uppgift misslyckades {$svar->getStatus()}"
+        . "returnerades istället för förväntat 200</p>";
+    }
+    $db->rollback();
+    //testa felaktigt (i morgon) =>400
+    $postData["date"]=$imorgon->format("Y-m-d");
+    $db->beginTransaction();
+    $svar=sparaNyUppgift($postData);
+    if($svar->getStatus()===400) {
+        $retur .="<p class='ok'>spara ny uppgift  misslyckades som förvänta (date = imorngon)</p>";
+    } else {
+        $retur .= "<p class='error'>spara ny uppgift misslyckades {$svar->getStatus()}"
+        . "returnerades istället för förväntat 400</p>";
+    }
+    $db->rollback();
+
+    // testa felaktigt datumformat =>400
+    $postData["date"]=$imorgon->format("d.m.Y");
+    $db->beginTransaction();
+    $svar=sparaNyUppgift($postData);
+    if($svar->getStatus()===400) {
+        $retur .="<p class='ok'>spara ny uppgift  misslyckades som förväntat (felaktigt datunformat)</p>";
+    } else {
+        $retur .= "<p class='error'>spara ny uppgift med felaktigt datumFormat"
+        . "returnerade {$svar->getStatus()} istället för förväntat 400</p>";
+    }
+    $db->rollback();
+    //testa datum saknas =>400 
+    $db->beginTransaction();
+    unset($postData["date"]);
+    $svar=sparaNyUppgift($postData);
+    if($svar->getStatus()===400) {
+        $retur .="<p class='ok'>spara ny uppgift  misslyckades som förväntat (datum saknas)</p>";
+    } else {
+        $retur .= "<p class='error'>spara ny uppgift utan datum"
+        . "returnerade {$svar->getStatus()} istället för förväntat 400</p>";
+    }
+    $db->rollback();
+    // testa felaktig tid (12 timmar) =>400
+    $db->beginTransaction();
+
+    $postData["date"]=$igar->format('Y-m-d');
+    $postData["time"]="12:00";
+    $svar=sparaNyUppgift($postData);
+    if($svar->getStatus()===400) {
+        $retur .="<p class='ok'>spara ny uppgift  misslyckades som förväntat (felaktig tid 12:00)</p>";
+    } else {
+        $retur .= "<p class='error'>spara ny uppgift med felaktigt tid (12:00)"
+        . "returnerade {$svar->getStatus()} istället för förväntat 400</p>";
+    }
+    $db->rollback();
+    // testa felaktigt tidsformat =>400
+    $db->beginTransaction();
+    $postData["date"]=$igar->format('Y-m-d');
+    $postData["time"]="5_30";
+    $svar=sparaNyUppgift($postData);
+    if($svar->getStatus()===400) {
+        $retur .="<p class='ok'>spara ny uppgift  misslyckades som förväntat (felaktig tidsforma)</p>";
+    } else {
+        $retur .= "<p class='error'>spara ny uppgift med felaktigt tidsformat"
+        . "returnerade {$svar->getStatus()} istället för förväntat 400</p>";
+    }
+    $db->rollback();
+
+    // testa tid saknas =>400
+    $db->beginTransaction();
+    unset($postData["time"]);
+    $svar=sparaNyUppgift($postData);
+    if($svar->getStatus()===400) {
+        $retur .="<p class='ok'>spara ny uppgift  misslyckades som förväntat (time saknas)</p>";
+    } else {
+        $retur .= "<p class='error'>spara ny uppgift utan tid"
+        . "returnerade {$svar->getStatus()} istället för förväntat 400</p>";
+    }
+    $db->rollback();
+    // testa description saknas =>200
+    unset ($postData["descirption"]);
+    $postData["time"]="3:15";
+        $db->beginTransaction();
+    $svar=sparaNyUppgift($postData);
+    if($svar->getStatus()===200) {
+        $retur .="<p class='ok'>spara ny uppgift  misslyckades utan desctiption lyckades</p>";
+    } else {
+        $retur .= "<p class='error'>spara ny uppgift utan description"
+        . "returnerade {$svar->getStatus()} istället för förväntat 200</p>";
+    }
+    $db->rollback();
+    // testa aktivitetsid felaktigt (-1) =>400
+    $postData["activityId"]=-1;
+    $db->beginTransaction();
+    $svar=sparaNyUppgift($postData);
+    if($svar->getStatus()===400) {
+        $retur .="<p class='ok'>spara ny uppgift  med felaktigt activityId (-1) misslyckades, som förväntat</p>";
+    } else {
+        $retur .= "<p class='error'>spara ny uppgift utan aktctivityId (-1)"
+        . "returnerade {$svar->getStatus()} istället för förväntat 400</p>";
+    }
+    $db->rollback();
+    // testa aktivitetsid som saknas (100) =>400
+    $postData["activityId"]=100;
+    $db->beginTransaction();
+    $svar=sparaNyUppgift($postData);
+    if($svar->getStatus()===400) {
+        $retur .="<p class='ok'>spara ny uppgift  med felaktigt activityId (100) misslyckades, som förväntat</p>";
+    } else {
+        $retur .= "<p class='error'>spara ny uppgift  med felaktigt aktctivityId (100)"
+        . "returnerade {$svar->getStatus()} istället för förväntat 400</p>";
+    }
+    $db->rollback();
+
+
+    } catch (Exception $ex) {
+        $retur .=$ex->getMessage();
+    }
     return $retur;
 }
 
